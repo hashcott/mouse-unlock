@@ -95,7 +95,7 @@ fn main() {
     for (path, dev) in evdev::enumerate() {
         if dev
             .supported_keys()
-            .map_or(false, |keys| keys.contains(Key::BTN_LEFT))
+            .is_some_and(|keys| keys.contains(Key::BTN_LEFT))
         {
             mice.push((path, dev));
         }

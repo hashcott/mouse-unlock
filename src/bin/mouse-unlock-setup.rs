@@ -149,7 +149,9 @@ impl App {
         let _ = fs::remove_file(SERVICE_DEST);
         let _ = sh("systemctl daemon-reload");
         let _ = fs::remove_file(DAEMON_DEST);
-        Ok(format!("service & binary removed (config kept at {CONFIG_PATH})"))
+        Ok(format!(
+            "service & binary removed (config kept at {CONFIG_PATH})"
+        ))
     }
 }
 
@@ -347,7 +349,9 @@ fn block(title: &str) -> Block<'_> {
 fn label(text: &str) -> Span<'static> {
     Span::styled(
         text.to_string(),
-        Style::default().fg(Color::Gray).add_modifier(Modifier::BOLD),
+        Style::default()
+            .fg(Color::Gray)
+            .add_modifier(Modifier::BOLD),
     )
 }
 
@@ -427,7 +431,9 @@ fn info_lines(app: &App) -> Vec<Line<'static>> {
 fn key(k: &str) -> Span<'static> {
     Span::styled(
         format!("[{k}]"),
-        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD),
     )
 }
 
