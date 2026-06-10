@@ -39,7 +39,7 @@ if [[ -f "$CONF_DEST" ]]; then
   echo "==> Keeping existing config: ${CONF_DEST}"
 else
   echo "==> Installing default config -> ${CONF_DEST}"
-  install -m 0644 "${SCRIPT_DIR}/mouse-unlock.conf" "${CONF_DEST}"
+  install -m 0600 "${SCRIPT_DIR}/mouse-unlock.conf" "${CONF_DEST}"
 fi
 
 echo "==> Installing service -> ${SERVICE_DEST}"
@@ -50,9 +50,9 @@ systemctl daemon-reload
 systemctl enable --now mouse-unlock.service
 
 echo
-echo "Done! Check it with:"
+echo "Almost done! Now set your click pattern (the daemon won't unlock until you do):"
+echo "  sudo mouse-unlock-setup"
+echo
+echo "Check it with:"
 echo "  systemctl status mouse-unlock"
 echo "  journalctl -u mouse-unlock -f"
-echo
-echo "Reconfigure anytime with the setup UI:  sudo mouse-unlock-setup"
-echo "Or edit ${CONF_DEST} by hand, then  sudo systemctl restart mouse-unlock"

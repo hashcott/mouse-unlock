@@ -80,7 +80,7 @@ if [[ -f "$CONF_DEST" ]]; then
   echo "==> Keeping existing config: ${CONF_DEST}"
 else
   echo "==> Installing default config -> ${CONF_DEST}"
-  install -m 0644 "${src}/mouse-unlock.conf" "${CONF_DEST}"
+  install -m 0600 "${src}/mouse-unlock.conf" "${CONF_DEST}"
 fi
 
 echo "==> Installing service -> ${SERVICE_DEST}"
@@ -92,8 +92,11 @@ systemctl enable --now mouse-unlock.service
 
 cat <<'EOF'
 
-Done! mouse-unlock is installed and running.
-  Configure:  sudo mouse-unlock-setup
-  Status:     systemctl status mouse-unlock
-  Logs:       journalctl -u mouse-unlock -f
+Almost done! mouse-unlock is installed and running, but you must set your
+click pattern before it can unlock anything:
+
+  sudo mouse-unlock-setup
+
+  Status:  systemctl status mouse-unlock
+  Logs:    journalctl -u mouse-unlock -f
 EOF

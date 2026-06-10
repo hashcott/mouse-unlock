@@ -9,9 +9,12 @@ license = "MIT"
 # Daemon
 evdev = "0.12"
 libc = "0.2"
+argon2 = "0.5"
 
 # Setup TUI (only linked into the `mouse-unlock-setup` binary, not the daemon)
 ratatui = "0.29"
+# Enables OsRng (getrandom) for generating Argon2 salts in the setup tool.
+rand_core = { version = "0.6", features = ["getrandom"] }
 
 # Optimize for a tiny binary and low RAM for a background daemon.
 [profile.release]

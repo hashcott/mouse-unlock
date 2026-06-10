@@ -27,7 +27,7 @@ Click a pattern like **Left-Left-Right-Right-Left** on your mouse and the screen
 - [Environment support](#environment-support)
 - [Uninstall](#uninstall)
 - [CI & releases](#ci--releases)
-- [Security warning](#-security-warning)
+- [Security](#-security)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -35,6 +35,9 @@ Click a pattern like **Left-Left-Right-Right-Left** on your mouse and the screen
 
 - 🪶 **Tiny footprint** — static Rust binary (~400 KB), ~1–2 MB RAM, **0% CPU when idle**.
 - 🖱️ **Click patterns** — any sequence of left / right / middle clicks, with a configurable timeout.
+- 🔒 **Hashed secret** — the pattern is stored as an **Argon2 hash** in a root-only (`0600`) config, never in plaintext.
+- 🛡️ **Brute-force lockout** — exponential backoff after too many wrong attempts (counted only while the screen is locked).
+- 🔑 **Optional USB second factor** — only unlock when a specific USB device is plugged in.
 - 🖥️ **Works everywhere** — uses `loginctl unlock-sessions` (systemd-logind): KDE, GNOME, XFCE… on both Wayland and X11.
 - 🎛️ **Friendly setup** — a terminal UI (`mouse-unlock-setup`) to record the pattern by clicking and to install/uninstall the service.
 - ⚙️ **Runs at boot** — installed as a systemd service.
@@ -84,16 +87,17 @@ This builds and installs **two** binaries:
 tar -xzf mouse-unlock-vX.Y.Z-linux-x86_64.tar.gz
 cd mouse-unlock-vX.Y.Z-linux-x86_64
 sudo install -m0755 mouse-unlock mouse-unlock-setup /usr/local/bin/
-sudo install -m0644 mouse-unlock.conf /etc/mouse-unlock.conf
+sudo install -m0600 mouse-unlock.conf /etc/mouse-unlock.conf
 sudo install -m0644 mouse-unlock.service /etc/systemd/system/
 sudo systemctl daemon-reload && sudo systemctl enable --now mouse-unlock
+sudo mouse-unlock-setup   # set your click pattern
 ```
 
 ## Usage
 
 ### Setup UI
 
-A small terminal interface (ratatui) for configuring everything — no need to edit files by hand:
+A small terminal interface (ratatui) for configuring everything — no need to edit files by hand. **You must run this at least once** to set your pattern:
 
 ```bash
 sudo mouse-unlock-setup
@@ -101,39 +105,46 @@ sudo mouse-unlock-setup
 
 ```
 ╭ Mouse Unlock — Setup ──────────────────────────╮
-│ Pattern : L L R R L                            │
+│ Pattern : configured (hidden, hashed)          │
 │ Timeout : 2000 ms                              │
 │ Unlock  : loginctl unlock-sessions             │
+│ USB 2FA : (none — optional)                     │
+│ Lockout : after 5 fails, 2000–300000 ms backoff │
 │ Config  : /etc/mouse-unlock.conf   root: yes   │
 ╰────────────────────────────────────────────────╯
 ╭ Actions ───────────────────────────────────────╮
-│ [r] Record pattern     [c] Clear pattern       │
-│ [t] Edit timeout       [u] Edit unlock cmd     │
-│ [1] Save config        [2] Install service     │
-│ [3] Save + Install     [4] Uninstall service   │
+│ [r] Record pattern   [c] Discard recording     │
+│ [t] Edit timeout     [u] Edit unlock cmd       │
+│ [k] USB factor (optional)                      │
+│ [1] Save  [2] Install  [3] Save+Install  [4] …  │
 │ [q] Quit                                       │
 ╰────────────────────────────────────────────────╯
 ```
 
-- **Record your pattern by clicking** Left / Right / Middle directly in the terminal window (uses terminal mouse capture — no `/dev/input` access needed at setup time).
+- **Record your pattern by clicking** Left / Right / Middle directly in the terminal window (uses terminal mouse capture — no `/dev/input` access needed at setup time). It is saved as an Argon2 hash, so the UI shows only “configured (hidden)” afterwards.
+- **`[k]` USB factor** lists your plugged-in USB devices; pick one to require it as a second factor, or disable it.
 - Actions: **save config only**, **install service only**, **save + install**, or **uninstall** the service.
 - Privileged actions (writing `/etc`, `systemctl`, copying the binary) need root → run with `sudo`. Without root it still lets you edit and saves the config to `./mouse-unlock.conf`.
 
 ### Configuration
 
-`/etc/mouse-unlock.conf`:
+`/etc/mouse-unlock.conf` (root-only, `0600`). The pattern itself is set via the setup tool and stored hashed:
 
 ```ini
-pattern    = LLRRL                    # L=left, R=right, M=middle
-timeout_ms = 2000                     # max time between two clicks
-unlock_cmd = loginctl unlock-sessions # command to run on match
+pattern_hash    = $argon2id$...        # written by mouse-unlock-setup — do not edit by hand
+timeout_ms      = 2000                 # max time between two clicks
+unlock_cmd      = loginctl unlock-sessions
+max_failures    = 5                    # wrong attempts before lockout (while locked)
+lockout_base_ms = 2000                 # first lockout, doubles each further failure…
+lockout_max_ms  = 300000               # …capped here (5 min)
+require_usb     =                      # optional: vendor:product[:serial], empty = off
 ```
 
 After editing: `sudo systemctl restart mouse-unlock`
 
 ### Test mode
 
-Prints the click buffer in real time so you can dial in your pattern (does **not** unlock):
+Prints each attempt (and whether it matches) so you can dial in your pattern (does **not** unlock):
 
 ```bash
 sudo mouse-unlock --test
@@ -169,11 +180,16 @@ GitHub Actions workflows:
 - **Auto Release** (`auto-release.yml`) — on every push to `master`: lints, **auto-bumps the patch version**, updates `Cargo.toml`/`Cargo.lock`, tags `vX.Y.Z`, builds, and publishes a GitHub Release with a `.tar.gz` (binaries + service + config + README) and a `.sha256`. Add `[skip release]` to a commit message to skip a run.
 - **Release** (`release.yml`) — manual path: publishes a release when you push a `v*` tag yourself.
 
-## ⚠️ Security warning
+## 🔐 Security
 
-The click sequence can be **observed and replayed** by onlookers. This is a **convenience** tool, **not** a strong security mechanism. Use it on a personal machine; do not treat it as a password replacement in sensitive environments.
+What this project does to harden the click-unlock:
 
-The daemon runs as root (it reads raw input devices and calls `loginctl`). The systemd unit applies sandboxing (`ProtectSystem`, `NoNewPrivileges`, `MemoryMax`, etc.).
+- **No plaintext secret** — the pattern is stored as an **Argon2id hash** with a random salt, in a root-only (`0600`) config. Reading the file (or a backup) does not reveal the pattern.
+- **Brute-force lockout** — after `max_failures` wrong attempts the daemon backs off exponentially. Failures are only counted **while the screen is locked**, so everyday clicking never causes an accidental lockout (and Argon2 is skipped while unlocked, keeping it light).
+- **Optional USB second factor** — if `require_usb` is set, a correct pattern unlocks **only** when that device is present, defeating shoulder-surfing/replay on its own.
+- The daemon runs as root (it reads raw input devices and calls `loginctl`); the systemd unit adds sandboxing (`ProtectSystem`, `NoNewPrivileges`, `MemoryMax`, …).
+
+**Honest limitation:** a click pattern is *low-entropy and visible* — a determined onlooker or camera can still observe and replay it. The hash and lockout defend the stored secret and online guessing, but they cannot stop observation. For real security, enable the **USB second factor** and treat the pattern as convenience, not a password replacement.
 
 ## Contributing
 
