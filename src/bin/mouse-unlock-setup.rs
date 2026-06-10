@@ -21,8 +21,8 @@ use rand_core::OsRng;
 
 use ratatui::backend::{Backend, CrosstermBackend};
 use ratatui::crossterm::event::{
-    self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, MouseButton,
-    MouseEventKind,
+    self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, KeyModifiers,
+    MouseButton, MouseEventKind,
 };
 use ratatui::crossterm::execute;
 use ratatui::crossterm::terminal::{
@@ -72,6 +72,13 @@ enum Mode {
     UsbSelect,
 }
 
+#[derive(Clone, Copy, PartialEq)]
+enum ServiceState {
+    Active,
+    Inactive,
+    NotInstalled,
+}
+
 struct UsbDev {
     spec: String, // vendor:product[:serial]
     name: String,
@@ -90,6 +97,7 @@ struct App {
     record_buf: Vec<Click>,
     input: String,
     usb_list: Vec<UsbDev>,
+    service: ServiceState,
     status: String,
     should_quit: bool,
 }
@@ -110,9 +118,14 @@ impl App {
             record_buf: Vec::new(),
             input: String::new(),
             usb_list: Vec::new(),
+            service: detect_service(),
             status: String::from("ready — press [r] to record a click pattern"),
             should_quit: false,
         }
+    }
+
+    fn refresh_service(&mut self) {
+        self.service = detect_service();
     }
 
     /// The Argon2 hash to write: a freshly recorded pattern, or the existing one.
@@ -237,7 +250,14 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
         terminal.draw(|f| ui(f, app))?;
         if event::poll(Duration::from_millis(200))? {
             match event::read()? {
-                Event::Key(k) if k.kind == KeyEventKind::Press => on_key(app, k.code),
+                Event::Key(k) if k.kind == KeyEventKind::Press => {
+                    // Ctrl+C always quits (raw mode delivers it as a key, not SIGINT).
+                    if k.code == KeyCode::Char('c') && k.modifiers.contains(KeyModifiers::CONTROL) {
+                        app.should_quit = true;
+                    } else {
+                        on_key(app, k.code);
+                    }
+                }
                 Event::Mouse(m) => on_mouse(app, m.kind),
                 _ => {}
             }
@@ -355,18 +375,22 @@ fn on_key_normal(app: &mut App, code: KeyCode) {
         KeyCode::Char('1') => {
             let r = app.save_config();
             apply(app, r);
+            app.refresh_service();
         }
         KeyCode::Char('2') => {
             let r = app.install_service();
             apply(app, r);
+            app.refresh_service();
         }
         KeyCode::Char('3') => {
             let r = app.save_and_install();
             apply(app, r);
+            app.refresh_service();
         }
         KeyCode::Char('4') => {
             let r = app.uninstall_service();
             apply(app, r);
+            app.refresh_service();
         }
         _ => {}
     }
@@ -506,6 +530,16 @@ fn info_lines(app: &App) -> Vec<Line<'static>> {
         )),
     ]));
 
+    let (svc_txt, svc_col) = match app.service {
+        ServiceState::Active => ("active (running)", Color::Green),
+        ServiceState::Inactive => ("installed, stopped", Color::Yellow),
+        ServiceState::NotInstalled => ("not installed", Color::DarkGray),
+    };
+    lines.push(Line::from(vec![
+        label("Service : "),
+        Span::styled(svc_txt, Style::default().fg(svc_col)),
+    ]));
+
     let root = if is_root() {
         Span::styled("root: yes", Style::default().fg(Color::Green))
     } else {
@@ -621,7 +655,12 @@ fn action_lines(app: &App) -> Vec<Line<'static>> {
                 key("4"),
                 Span::raw(" Uninstall"),
             ]),
-            Line::from(vec![key("q"), Span::raw(" Quit")]),
+            Line::from(vec![
+                key("q"),
+                Span::raw(" / "),
+                key("Ctrl+C"),
+                Span::raw(" Quit"),
+            ]),
         ],
     }
 }
@@ -750,6 +789,19 @@ fn find_daemon_binary() -> Option<PathBuf> {
     candidates.push(PathBuf::from("target/debug/mouse-unlock"));
     candidates.push(PathBuf::from(DAEMON_DEST));
     candidates.into_iter().find(|p| p.is_file())
+}
+
+fn detect_service() -> ServiceState {
+    if !Path::new(SERVICE_DEST).exists() {
+        return ServiceState::NotInstalled;
+    }
+    match Command::new("systemctl")
+        .args(["is-active", "mouse-unlock.service"])
+        .output()
+    {
+        Ok(o) if o.stdout.starts_with(b"active") => ServiceState::Active,
+        _ => ServiceState::Inactive,
+    }
 }
 
 struct LoadedConfig {
