@@ -158,7 +158,7 @@ impl App {
 
     fn save_config(&mut self) -> Result<String, String> {
         let hash = self.resolve_hash()?;
-        let path = config_target();
+        let path = config_path();
         fs::write(&path, self.render_config(&hash)).map_err(|e| format!("write {path}: {e}"))?;
         // Secret hash -> restrict to root only.
         fs::set_permissions(&path, fs::Permissions::from_mode(0o600))
@@ -516,7 +516,7 @@ fn info_lines(app: &App) -> Vec<Line<'static>> {
     };
     lines.push(Line::from(vec![
         label("Config  : "),
-        Span::raw(config_target()),
+        Span::raw(config_display()),
         Span::raw("   "),
         root,
     ]));
@@ -705,11 +705,21 @@ fn require_root() -> Result<(), String> {
     }
 }
 
-fn config_target() -> String {
+/// The actual file we read from / write to.
+fn config_path() -> String {
     if is_root() {
         CONFIG_PATH.to_string()
     } else {
-        "mouse-unlock.conf (cwd)".to_string()
+        "mouse-unlock.conf".to_string()
+    }
+}
+
+/// A human-readable label for the config location (never used as a path).
+fn config_display() -> String {
+    if is_root() {
+        CONFIG_PATH.to_string()
+    } else {
+        "mouse-unlock.conf (cwd, not root)".to_string()
     }
 }
 
