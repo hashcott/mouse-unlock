@@ -1,15 +1,13 @@
-<!-- Replace OWNER/REPO throughout with your GitHub repository (e.g. harry/mouse-unlock). -->
-
 # mouse-unlock
 
 > Unlock your Linux screen with a **secret mouse-click pattern** — an ultra-light, written-in-Rust daemon.
 
-[![Build](https://github.com/OWNER/REPO/actions/workflows/build.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/build.yml)
-[![Release](https://github.com/OWNER/REPO/actions/workflows/auto-release.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/auto-release.yml)
-[![Latest release](https://img.shields.io/github/v/release/OWNER/REPO?sort=semver)](https://github.com/OWNER/REPO/releases/latest)
+[![Build](https://github.com/hashcott/mouse-unlock/actions/workflows/build.yml/badge.svg)](https://github.com/hashcott/mouse-unlock/actions/workflows/build.yml)
+[![Release](https://github.com/hashcott/mouse-unlock/actions/workflows/auto-release.yml/badge.svg)](https://github.com/hashcott/mouse-unlock/actions/workflows/auto-release.yml)
+[![Latest release](https://img.shields.io/github/v/release/hashcott/mouse-unlock?sort=semver)](https://github.com/hashcott/mouse-unlock/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Click a pattern like **Left-Left-Right-Right-Left** on your mouse and the screen unlocks — no password typing. Inspired by [DixitRam/MouseClickUnlock](https://github.com/DixitRam/MouseClickUnlock) (the original is in Python); this is a Rust rewrite focused on a tiny footprint.
+Click a pattern like **Left-Left-Right-Right-Left** on your mouse and the screen unlocks — no password typing. A small Rust daemon with a tiny footprint.
 
 ---
 
@@ -56,13 +54,13 @@ Click a pattern like **Left-Left-Right-Right-Left** on your mouse and the screen
 No Rust toolchain needed — downloads the latest release and sets up the service:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/master/scripts/install.sh | sudo REPO=OWNER/REPO bash
+curl -fsSL https://raw.githubusercontent.com/hashcott/mouse-unlock/master/scripts/install.sh | sudo bash
 ```
 
 Pin a specific version with `VERSION`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/master/scripts/install.sh | sudo REPO=OWNER/REPO VERSION=v0.1.0 bash
+curl -fsSL https://raw.githubusercontent.com/hashcott/mouse-unlock/master/scripts/install.sh | sudo VERSION=v0.1.0 bash
 ```
 
 ### From source
@@ -70,8 +68,8 @@ curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/master/scripts/install.s
 Requires [Rust/cargo](https://rustup.rs):
 
 ```bash
-git clone https://github.com/OWNER/REPO.git
-cd REPO
+git clone https://github.com/hashcott/mouse-unlock.git
+cd mouse-unlock
 sudo bash install.sh
 ```
 
@@ -197,5 +195,4 @@ cargo fmt --all
 
 ## Acknowledgements
 
-- Original idea & Python implementation: [DixitRam/MouseClickUnlock](https://github.com/DixitRam/MouseClickUnlock).
 - Built with [evdev](https://crates.io/crates/evdev) and [ratatui](https://crates.io/crates/ratatui).

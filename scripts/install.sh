@@ -3,16 +3,14 @@
 # and sets up the systemd service.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/master/scripts/install.sh | sudo bash
+#   curl -fsSL https://raw.githubusercontent.com/hashcott/mouse-unlock/master/scripts/install.sh | sudo bash
 #
 # Options (environment variables):
-#   REPO=owner/repo     GitHub repository to install from (required if not baked in below)
+#   REPO=owner/repo     Install from a fork (default: hashcott/mouse-unlock)
 #   VERSION=v0.2.0      Specific release tag (default: latest)
-#
-#   curl -fsSL .../install.sh | sudo REPO=owner/repo bash
 set -euo pipefail
 
-REPO="${REPO:-OWNER/REPO}"
+REPO="${REPO:-hashcott/mouse-unlock}"
 VERSION="${VERSION:-latest}"
 BIN_DIR="/usr/local/bin"
 CONF_DEST="/etc/mouse-unlock.conf"
@@ -24,7 +22,6 @@ err() {
 }
 
 [[ $EUID -eq 0 ]] || err "must run as root (use sudo)"
-[[ "$REPO" != "OWNER/REPO" ]] || err "set the repository, e.g.  REPO=owner/repo  (or edit this script)"
 
 # Only Linux x86_64 binaries are published; other targets must build from source.
 os="$(uname -s)"

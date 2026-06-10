@@ -1,6 +1,6 @@
 [Unit]
 Description=Mouse Click Unlock daemon
-Documentation=https://github.com/DixitRam/MouseClickUnlock
+Documentation=https://github.com/hashcott/mouse-unlock
 After=systemd-logind.service
 Wants=systemd-logind.service
 
