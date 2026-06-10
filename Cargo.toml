@@ -1,6 +1,6 @@
 [package]
 name = "mouse-unlock"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 description = "Lightweight daemon that unlocks the Linux screen on a secret mouse-click pattern"
 license = "MIT"
