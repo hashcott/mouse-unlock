@@ -1,0 +1,119 @@
+name: Auto Release
+
+# Every push to master automatically bumps the patch version, tags it,
+# builds the binaries, and publishes a GitHub Release — no manual tagging.
+# Put "[skip release]" in a commit message to skip a run.
+
+on:
+  push:
+    branches: [master, main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auto-release
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  auto-release:
+    name: Bump, build & publish (Linux x86_64)
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.head_commit.message, '[skip release]') && !contains(github.event.head_commit.message, '[skip ci]') }}
+    steps:
+      - name: Checkout (full history + tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute next version
+        id: ver
+        run: |
+          set -euo pipefail
+          latest=$(git tag -l 'v*' --sort=-v:refname | head -n1)
+          cargo_ver=$(grep -E '^version = "[0-9]+\.[0-9]+\.[0-9]+"' Cargo.toml | head -n1 | sed -E 's/.*"(.*)".*/\1/')
+          if [ -z "$latest" ]; then
+            new="$cargo_ver"          # first release: use the version in Cargo.toml
+          else
+            ver=${latest#v}
+            IFS=. read -r MA MI PA <<< "$ver"
+            new="${MA}.${MI}.$((PA + 1))"
+          fi
+          if git rev-parse "v${new}" >/dev/null 2>&1; then
+            echo "Tag v${new} already exists; nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "new=${new}" >> "$GITHUB_OUTPUT"
+          echo "cargo_ver=${cargo_ver}" >> "$GITHUB_OUTPUT"
+          echo "Next version: ${new}"
+
+      - name: Install Rust toolchain
+        if: steps.ver.outputs.skip == 'false'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        if: steps.ver.outputs.skip == 'false'
+        uses: Swatinem/rust-cache@v2
+
+      - name: Format check
+        if: steps.ver.outputs.skip == 'false'
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        if: steps.ver.outputs.skip == 'false'
+        run: cargo clippy --release --all-targets -- -D warnings
+
+      - name: Bump version in Cargo.toml
+        if: steps.ver.outputs.skip == 'false' && steps.ver.outputs.new != steps.ver.outputs.cargo_ver
+        run: |
+          set -euo pipefail
+          sed -i -E 's/^version = "[0-9]+\.[0-9]+\.[0-9]+"/version = "${{ steps.ver.outputs.new }}"/' Cargo.toml
+
+      - name: Build (release)
+        if: steps.ver.outputs.skip == 'false'
+        run: cargo build --release   # no --locked: refreshes Cargo.lock after a bump
+
+      - name: Commit version bump
+        if: steps.ver.outputs.skip == 'false' && steps.ver.outputs.new != steps.ver.outputs.cargo_ver
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Cargo.toml Cargo.lock
+          git commit -m "Release v${{ steps.ver.outputs.new }} [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Create and push tag
+        if: steps.ver.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          git tag "v${{ steps.ver.outputs.new }}"
+          git push origin "v${{ steps.ver.outputs.new }}"
+
+      - name: Package
+        if: steps.ver.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          NAME="mouse-unlock-v${{ steps.ver.outputs.new }}-linux-x86_64"
+          mkdir -p "dist/${NAME}"
+          cp target/release/mouse-unlock target/release/mouse-unlock-setup "dist/${NAME}/"
+          cp mouse-unlock.service mouse-unlock.conf README.md "dist/${NAME}/"
+          tar -C dist -czf "${NAME}.tar.gz" "${NAME}"
+          sha256sum "${NAME}.tar.gz" > "${NAME}.tar.gz.sha256"
+
+      - name: Publish release
+        if: steps.ver.outputs.skip == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.new }}
+          generate_release_notes: true
+          files: |
+            mouse-unlock-*-linux-x86_64.tar.gz
+            mouse-unlock-*-linux-x86_64.tar.gz.sha256

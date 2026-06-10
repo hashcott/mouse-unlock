@@ -77,6 +77,16 @@ systemctl status mouse-unlock
 journalctl -u mouse-unlock -f
 ```
 
+## CI & releases
+
+GitHub Actions workflows:
+
+- **Build** (`build.yml`) — runs on pull requests: format check, clippy (`-D warnings`), release build, artifact upload.
+- **Auto Release** (`auto-release.yml`) — on every push to `master`: lints, **auto-bumps the patch version**, updates `Cargo.toml`/`Cargo.lock`, tags `vX.Y.Z`, builds, and publishes a GitHub Release with a `.tar.gz` (binaries + service + config + README) and a `.sha256`. Add `[skip release]` to a commit message to skip a run.
+- **Release** (`release.yml`) — manual path: publishes a release when you push a `v*` tag yourself (or via *Run workflow*).
+
+The first auto-release uses the version currently in `Cargo.toml`; each subsequent push to `master` bumps the patch number.
+
 ## ⚠️ Security warning
 
 The click sequence can be **observed and replayed** by onlookers. This is a **convenience** tool, NOT a strong security mechanism. Use it on a personal machine; do not treat it as a password replacement in sensitive environments.
