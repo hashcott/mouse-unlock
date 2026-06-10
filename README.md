@@ -195,4 +195,5 @@ cargo fmt --all
 
 ## Acknowledgements
 
+- Inspired by [DixitRam/MouseClickUnlock](https://github.com/DixitRam/MouseClickUnlock) — the original idea and Python implementation.
 - Built with [evdev](https://crates.io/crates/evdev) and [ratatui](https://crates.io/crates/ratatui).
