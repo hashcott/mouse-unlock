@@ -584,11 +584,7 @@ fn load_config() -> (Vec<Click>, u64, String) {
                             timeout_ms = n;
                         }
                     }
-                    "unlock_cmd" => {
-                        if !v.is_empty() {
-                            unlock_cmd = v.to_string();
-                        }
-                    }
+                    "unlock_cmd" if !v.is_empty() => unlock_cmd = v.to_string(),
                     _ => {}
                 }
             }
