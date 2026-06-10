@@ -88,7 +88,8 @@ install -m 0644 "${src}/mouse-unlock.service" "${SERVICE_DEST}"
 
 echo "==> Enabling service"
 systemctl daemon-reload
-systemctl enable --now mouse-unlock.service
+systemctl enable mouse-unlock.service
+systemctl restart mouse-unlock.service   # restart so an upgrade picks up the new binary
 
 cat <<'EOF'
 
