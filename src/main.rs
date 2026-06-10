@@ -243,12 +243,10 @@ fn finalize_attempt(
         return;
     }
 
-    // Skip work (and Argon2) when the screen is clearly unlocked; only count failures
-    // toward lockout while it is actually locked.
+    // Lock state is only used to gate brute-force counting. We do NOT skip unlocking
+    // when it reports "unlocked": some desktops (e.g. Cinnamon) don't update logind's
+    // LockedHint, and running the unlock command while already unlocked is harmless.
     let lock = screen_locked();
-    if lock == Some(false) {
-        return;
-    }
 
     if verify_pattern(&config.pattern_hash, &candidate) {
         *failures = 0;
@@ -260,7 +258,7 @@ fn finalize_attempt(
                 return;
             }
         }
-        eprintln!("[mouse-unlock] >>> pattern matched, unlocking");
+        eprintln!("[mouse-unlock] >>> pattern matched, unlocking (locked={lock:?})");
         run_unlock(&config.unlock_cmd);
     } else if lock == Some(true) {
         *failures += 1;
