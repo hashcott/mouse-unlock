@@ -1,0 +1,22 @@
+[package]
+name = "mouse-unlock"
+version = "0.1.0"
+edition = "2021"
+description = "Lightweight daemon that unlocks the Linux screen on a secret mouse-click pattern"
+license = "MIT"
+
+[dependencies]
+# Daemon
+evdev = "0.12"
+libc = "0.2"
+
+# Setup TUI (only linked into the `mouse-unlock-setup` binary, not the daemon)
+ratatui = "0.29"
+
+# Optimize for a tiny binary and low RAM for a background daemon.
+[profile.release]
+opt-level = "z"     # prioritize smallest size
+lto = true          # link-time optimization
+codegen-units = 1   # better optimization, smaller binary
+panic = "abort"     # drop unwinding -> smaller (systemd restarts on panic)
+strip = true        # strip symbols -> much smaller binary

@@ -1,0 +1,28 @@
+[Unit]
+Description=Mouse Click Unlock daemon
+Documentation=https://github.com/DixitRam/MouseClickUnlock
+After=systemd-logind.service
+Wants=systemd-logind.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/mouse-unlock --config /etc/mouse-unlock.conf
+Restart=on-failure
+RestartSec=2
+
+# Resource limits (this daemon is very light; cap it to be safe).
+MemoryMax=32M
+Nice=10
+
+# Hardening for a process running as root.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+# Must read /dev/input/*, so do NOT set PrivateDevices=true.
+
+[Install]
+WantedBy=multi-user.target
