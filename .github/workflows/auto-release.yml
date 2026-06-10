@@ -57,6 +57,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+          targets: x86_64-unknown-linux-musl
 
       - name: Cache cargo
         if: steps.ver.outputs.skip == 'false'
@@ -76,9 +77,10 @@ jobs:
           set -euo pipefail
           sed -i -E 's/^version = "[0-9]+\.[0-9]+\.[0-9]+"/version = "${{ steps.ver.outputs.new }}"/' Cargo.toml
 
-      - name: Build (release)
+      - name: Build (release, static musl)
         if: steps.ver.outputs.skip == 'false'
-        run: cargo build --release   # no --locked: refreshes Cargo.lock after a bump
+        # musl = fully static, glibc-independent binary that runs on any distro.
+        run: cargo build --release --target x86_64-unknown-linux-musl
 
       - name: Commit version bump
         if: steps.ver.outputs.skip == 'false' && steps.ver.outputs.new != steps.ver.outputs.cargo_ver
@@ -102,8 +104,9 @@ jobs:
         run: |
           set -euo pipefail
           NAME="mouse-unlock-v${{ steps.ver.outputs.new }}-linux-x86_64"
+          BIN=target/x86_64-unknown-linux-musl/release
           mkdir -p "dist/${NAME}"
-          cp target/release/mouse-unlock target/release/mouse-unlock-setup "dist/${NAME}/"
+          cp "$BIN/mouse-unlock" "$BIN/mouse-unlock-setup" "dist/${NAME}/"
           cp mouse-unlock.service mouse-unlock.conf README.md "dist/${NAME}/"
           tar -C dist -czf "${NAME}.tar.gz" "${NAME}"
           sha256sum "${NAME}.tar.gz" > "${NAME}.tar.gz.sha256"

@@ -25,12 +25,15 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Build (release)
-        run: cargo build --release --locked
+      - name: Build (release, static musl)
+        # musl = fully static, glibc-independent binary that runs on any distro.
+        run: cargo build --release --locked --target x86_64-unknown-linux-musl
 
       - name: Package
         id: package
@@ -41,8 +44,9 @@ jobs:
             TAG="${{ github.event.inputs.tag }}"
           fi
           NAME="mouse-unlock-${TAG}-linux-x86_64"
+          BIN=target/x86_64-unknown-linux-musl/release
           mkdir -p "dist/${NAME}"
-          cp target/release/mouse-unlock target/release/mouse-unlock-setup "dist/${NAME}/"
+          cp "$BIN/mouse-unlock" "$BIN/mouse-unlock-setup" "dist/${NAME}/"
           cp mouse-unlock.service mouse-unlock.conf README.md "dist/${NAME}/"
           tar -C dist -czf "${NAME}.tar.gz" "${NAME}"
           sha256sum "${NAME}.tar.gz" > "${NAME}.tar.gz.sha256"

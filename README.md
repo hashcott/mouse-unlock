@@ -50,7 +50,7 @@ Click a pattern like **Left-Left-Right-Right-Left** on your mouse and the screen
 
 ## Install
 
-> Requires a Linux system with **systemd**. Prebuilt binaries target **x86_64**; other architectures should [build from source](#from-source).
+> Requires a Linux system with **systemd**. Prebuilt binaries are **statically linked (musl)** for **x86_64**, so they run on any distro regardless of glibc version; other architectures should [build from source](#from-source).
 
 ### Quick install (prebuilt, recommended)
 
