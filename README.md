@@ -63,7 +63,7 @@ curl -fsSL https://raw.githubusercontent.com/hashcott/mouse-unlock/master/script
 Pin a specific version with `VERSION`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hashcott/mouse-unlock/master/scripts/install.sh | sudo VERSION=v0.1.0 bash
+curl -fsSL https://raw.githubusercontent.com/hashcott/mouse-unlock/master/scripts/install.sh | sudo VERSION=v0.1.8 bash
 ```
 
 ### From source
